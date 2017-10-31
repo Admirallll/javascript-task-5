@@ -13,7 +13,6 @@ module.exports = getEmitter;
  */
 function getEmitter() {
     let allEvents = {};
-    let namespaces = {};
 
     return {
 
@@ -29,14 +28,6 @@ function getEmitter() {
             if (!(event in allEvents)) {
                 allEvents[event] = [];
             }
-            let namespaceParts = event.split('.');
-            let currentNamespace = namespaces;
-            for (let namespacePart of namespaceParts) {
-                if (!(namespacePart in currentNamespace)) {
-                    currentNamespace[namespacePart] = {};
-                }
-                currentNamespace = currentNamespace[namespacePart];
-            }
             allEvents[event].push({ context, handler });
 
             return this;
@@ -49,7 +40,7 @@ function getEmitter() {
          * @returns {Object} emitter
          */
         off: function (event, context) {
-            let eventNames = getNamespacesForDelete(namespaces, event);
+            let eventNames = getNamespacesForDelete(Object.keys(allEvents), event);
             for (let eventName of eventNames) {
                 allEvents[eventName] = allEvents[eventName].filter(
                     currentEvent => currentEvent.context !== context
@@ -126,34 +117,7 @@ function callEvent(allEvents, eventName) {
 }
 
 function getNamespacesForDelete(namespaces, name) {
-    let namespaceParts = name.split('.');
-    for (let part of namespaceParts) {
-        if (!(part in namespaces)) {
-            return [];
-        }
-        namespaces = namespaces[part];
-    }
-    let result = getAllNamespacesRecursively(namespaces, name);
-    result.push(name);
-
-    return result;
-}
-
-function getAllNamespacesRecursively(namespaces, startNamespace) {
-    let result = [];
-    let currentNamespace = startNamespace;
-    for (let namespace of Object.keys(namespaces)) {
-        if (currentNamespace.length > 0) {
-            currentNamespace += '.';
-        }
-        result.push(currentNamespace + namespace);
-        currentNamespace += namespace;
-        for (let resultNamespace of getAllNamespacesRecursively(namespaces[namespace])) {
-            result.push(currentNamespace + '.' + resultNamespace);
-        }
-    }
-
-    return result;
+    return namespaces.filter(namespace => namespace.startsWith(name));
 }
 
 function parseNamespace(namespace) {
