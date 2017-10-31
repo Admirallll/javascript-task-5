@@ -25,13 +25,7 @@ function getEmitter() {
          * @param {Object} state
          * @returns {Object} this emitter with new event
          */
-        on: function (event, context, handler, state) {
-            if (state === undefined) {
-                state = {
-                    currentState: 0,
-                    stateChecker: () => true
-                };
-            }
+        on: function (event, context, handler) {
             if (!(event in allEvents)) {
                 allEvents[event] = [];
             }
@@ -43,12 +37,7 @@ function getEmitter() {
                 }
                 currentNamespace = currentNamespace[namespacePart];
             }
-            allEvents[event].push({ context,
-                function: function () {
-                    handler.call(context);
-                },
-                state }
-            );
+            allEvents[event].push({ context, handler });
 
             return this;
         },
@@ -93,11 +82,13 @@ function getEmitter() {
          * @returns {Object} emitter
          */
         several: function (event, context, handler, times) {
-            let state = {
-                currentState: 0,
-                stateChecker: currentState => currentState <= times || times <= 0
-            };
-            this.on(event, context, handler, state);
+            let state = 0;
+            this.on(event, context, () => {
+                if (state < times) {
+                    handler.call(context);
+                }
+                state++;
+            });
 
             return this;
         },
@@ -112,11 +103,13 @@ function getEmitter() {
          * @returns {Object} emitter
          */
         through: function (event, context, handler, frequency) {
-            let state = {
-                currentState: 1,
-                stateChecker: currentState => currentState % frequency === 0 || frequency <= 0
-            };
-            this.on(event, context, handler, state);
+            let state = 0;
+            this.on(event, context, () => {
+                if (state % frequency === 0) {
+                    handler.call(context);
+                }
+                state++;
+            });
 
             return this;
         }
@@ -128,11 +121,7 @@ function callEvent(allEvents, eventName) {
         return;
     }
     for (let event of allEvents[eventName]) {
-        event.state.currentState++;
-        if (!(event.state.stateChecker(event.state.currentState))) {
-            continue;
-        }
-        event.function();
+        event.handler.call(event.context);
     }
 }
 
