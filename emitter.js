@@ -122,12 +122,11 @@ function getNamespacesForDelete(namespaces, name) {
 
 function parseNamespace(namespace) {
     let eventNames = [];
-    let dotIndex = -1;
-    do {
-        dotIndex = namespace.lastIndexOf('.');
-        eventNames.push(namespace);
-        namespace = namespace.substring(0, dotIndex);
-    } while (dotIndex > 0);
+    let namespaceParts = namespace.split('.');
+    while (namespaceParts.length > 0) {
+        eventNames.push(namespaceParts.join('.'));
+        namespaceParts.pop();
+    }
 
     return eventNames;
 }
