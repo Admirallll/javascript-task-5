@@ -108,16 +108,15 @@ function getEmitter() {
 }
 
 function callEvent(allEvents, eventName) {
-    if (!(eventName in allEvents)) {
-        return;
-    }
-    for (let event of allEvents[eventName]) {
-        event.handler.call(event.context);
+    if (eventName in allEvents) {
+        for (let event of allEvents[eventName]) {
+            event.handler.call(event.context);
+        }
     }
 }
 
 function getNamespacesForDelete(namespaces, name) {
-    return namespaces.filter(namespace => namespace.startsWith(name));
+    return namespaces.filter(namespace => namespace.startsWith(name + '.') || namespace === name);
 }
 
 function parseNamespace(namespace) {
