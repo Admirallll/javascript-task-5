@@ -25,7 +25,7 @@ function getEmitter() {
          * @returns {Object} this emitter with new event
          */
         on: function (event, context, handler) {
-            if (!(event in allEvents)) {
+            if (!allEvents.hasOwnProperty(event)) {
                 allEvents[event] = [];
             }
             allEvents[event].push({ context, handler });
@@ -42,9 +42,7 @@ function getEmitter() {
         off: function (event, context) {
             let eventNames = getNamespacesForDelete(Object.keys(allEvents), event);
             for (let eventName of eventNames) {
-                allEvents[eventName] = allEvents[eventName].filter(
-                    currentEvent => currentEvent.context !== context
-                );
+                offOneNamespace(allEvents, eventName, context);
             }
 
             return this;
@@ -56,8 +54,8 @@ function getEmitter() {
          * @returns {Object} emitter
          */
         emit: function (event) {
-            for (let eventName of parseNamespace(event)) {
-                callEvent(allEvents, eventName);
+            for (let eventName of getNamespacesForEmit(event)) {
+                callHandlers(allEvents, eventName);
             }
 
             return this;
@@ -73,15 +71,15 @@ function getEmitter() {
          * @returns {Object} emitter
          */
         several: function (event, context, handler, times) {
-            let state = 0;
-            this.on(event, context, () => {
-                if (state < times) {
-                    handler.call(context);
-                }
-                state++;
-            });
+            let counter = 0;
 
-            return this;
+            return this.on(event, context, () => {
+                handler.call(context);
+                counter++;
+                if (counter >= times) {
+                    offOneNamespace(allEvents, event, context);
+                }
+            });
         },
 
         /**
@@ -94,23 +92,28 @@ function getEmitter() {
          * @returns {Object} emitter
          */
         through: function (event, context, handler, frequency) {
-            let state = 0;
-            this.on(event, context, () => {
-                if (state % frequency === 0) {
+            let counter = 0;
+
+            return this.on(event, context, () => {
+                if (counter % frequency === 0) {
                     handler.call(context);
                 }
-                state++;
+                counter++;
             });
-
-            return this;
         }
     };
 }
 
-function callEvent(allEvents, eventName) {
+function offOneNamespace(allEvents, namespace, context) {
+    allEvents[namespace] = allEvents[namespace].filter(
+        subscription => subscription.context !== context
+    );
+}
+
+function callHandlers(allEvents, eventName) {
     if (eventName in allEvents) {
-        for (let event of allEvents[eventName]) {
-            event.handler.call(event.context);
+        for (let subscription of allEvents[eventName]) {
+            subscription.handler.call(subscription.context);
         }
     }
 }
@@ -119,7 +122,7 @@ function getNamespacesForDelete(namespaces, name) {
     return namespaces.filter(namespace => namespace.startsWith(name + '.') || namespace === name);
 }
 
-function parseNamespace(namespace) {
+function getNamespacesForEmit(namespace) {
     let eventNames = [];
     let namespaceParts = namespace.split('.');
     while (namespaceParts.length > 0) {
