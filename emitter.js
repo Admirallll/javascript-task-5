@@ -40,9 +40,9 @@ function getEmitter() {
          * @returns {Object} emitter
          */
         off: function (event, context) {
-            let eventNames = getNamespacesForDelete(Object.keys(allEvents), event);
-            for (let eventName of eventNames) {
-                offOneNamespace(allEvents, eventName, context);
+            let namespaces = getNamespacesForDelete(Object.keys(allEvents), event);
+            for (let namespace of namespaces) {
+                offOneNamespace(allEvents, namespace, context);
             }
 
             return this;
@@ -72,6 +72,9 @@ function getEmitter() {
          */
         several: function (event, context, handler, times) {
             let counter = 0;
+            if (times <= 0) {
+                return this.on(event, context, handler);
+            }
 
             return this.on(event, context, () => {
                 handler.call(context);
@@ -93,6 +96,9 @@ function getEmitter() {
          */
         through: function (event, context, handler, frequency) {
             let counter = 0;
+            if (frequency <= 0) {
+                return this.on(event, context, handler);
+            }
 
             return this.on(event, context, () => {
                 if (counter % frequency === 0) {
